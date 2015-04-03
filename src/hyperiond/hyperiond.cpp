@@ -1,7 +1,6 @@
 // C++ includes
 #include <cassert>
 #include <csignal>
-#include <clocale>
 
 // QT includes
 #include <QCoreApplication>
@@ -27,6 +26,16 @@
 #include <grabber/V4L2Wrapper.h>
 #endif
 
+#ifdef ENABLE_FB
+// Framebuffer grabber includes
+#include <grabber/FramebufferWrapper.h>
+#endif
+
+#ifdef ENABLE_OSX
+// OSX grabber includes
+#include <grabber/OsxWrapper.h>
+#endif
+
 // XBMC Video checker includes
 #include <xbmcvideochecker/XBMCVideoChecker.h>
 
@@ -36,8 +45,10 @@
 // JsonServer includes
 #include <jsonserver/JsonServer.h>
 
+#ifdef ENABLE_PROTOBUF
 // ProtoServer includes
 #include <protoserver/ProtoServer.h>
+#endif
 
 // BoblightServer includes
 #include <boblightserver/BoblightServer.h>
@@ -113,22 +124,22 @@ int main(int argc, char** argv)
 		const unsigned duration_ms   = effectConfig["duration_ms"].asUInt();
 		const int priority = 0;
 		
+		hyperion.setColor(priority+1, ColorRgb::BLACK, duration_ms, false);
+
 		if (effectConfig.isMember("args"))
 		{
 			const Json::Value effectConfigArgs = effectConfig["args"];
 			if (hyperion.setEffect(effectName, effectConfigArgs, priority, duration_ms) == 0)
-                        {
-                                std::cout << "Boot sequence(" << effectName << ") with user-defined arguments created and started" << std::endl;
-                        }
-                        else
-                        {
-                                std::cout << "Failed to start boot sequence: " << effectName << " with user-defined arguments" << std::endl;
-                        }
-
+			{
+					std::cout << "Boot sequence(" << effectName << ") with user-defined arguments created and started" << std::endl;
+			}
+			else
+			{
+					std::cout << "Failed to start boot sequence: " << effectName << " with user-defined arguments" << std::endl;
+			}
 		}
 		else
 		{
-
 			if (hyperion.setEffect(effectName, priority, duration_ms) == 0)
 			{
 				std::cout << "Boot sequence(" << effectName << ") created and started" << std::endl;
@@ -181,10 +192,12 @@ int main(int argc, char** argv)
 		std::cout << "Frame grabber created and started" << std::endl;
 	}
 #else
+#if !defined(ENABLE_OSX) && !defined(ENABLE_FB)
 	if (config.isMember("framegrabber"))
 	{
 		std::cerr << "The dispmanx framegrabber can not be instantiated, becuse it has been left out from the build" << std::endl;
 	}
+#endif
 #endif
 
 #ifdef ENABLE_V4L2
@@ -223,6 +236,68 @@ int main(int argc, char** argv)
 		std::cerr << "The v4l2 grabber can not be instantiated, becuse it has been left out from the build" << std::endl;
 	}
 #endif
+	
+#ifdef ENABLE_FB
+	// Construct and start the framebuffer grabber if the configuration is present
+	FramebufferWrapper * fbGrabber = nullptr;
+	if (config.isMember("framegrabber"))
+	{
+		const Json::Value & grabberConfig = config["framegrabber"];
+		fbGrabber = new FramebufferWrapper(
+			grabberConfig.get("device", "/dev/fb0").asString(),
+			grabberConfig["width"].asUInt(),
+			grabberConfig["height"].asUInt(),
+			grabberConfig["frequency_Hz"].asUInt(),
+			&hyperion);
+
+		if (xbmcVideoChecker != nullptr)
+		{
+			QObject::connect(xbmcVideoChecker, SIGNAL(grabbingMode(GrabbingMode)), fbGrabber, SLOT(setGrabbingMode(GrabbingMode)));
+			QObject::connect(xbmcVideoChecker, SIGNAL(videoMode(VideoMode)), fbGrabber, SLOT(setVideoMode(VideoMode)));
+		}
+
+		fbGrabber->start();
+		std::cout << "Framebuffer grabber created and started" << std::endl;
+	}
+#else
+#if !defined(ENABLE_DISPMANX) && !defined(ENABLE_OSX)
+	if (config.isMember("framegrabber"))
+	{
+		std::cerr << "The framebuffer grabber can not be instantiated, becuse it has been left out from the build" << std::endl;
+	}
+#endif
+#endif
+    
+#ifdef ENABLE_OSX
+    // Construct and start the osx grabber if the configuration is present
+    OsxWrapper * osxGrabber = nullptr;
+    if (config.isMember("framegrabber"))
+    {
+        const Json::Value & grabberConfig = config["framegrabber"];
+        osxGrabber = new OsxWrapper(
+                                           grabberConfig.get("display", 0).asUInt(),
+                                           grabberConfig["width"].asUInt(),
+                                           grabberConfig["height"].asUInt(),
+                                           grabberConfig["frequency_Hz"].asUInt(),
+                                           &hyperion);
+        
+        if (xbmcVideoChecker != nullptr)
+        {
+            QObject::connect(xbmcVideoChecker, SIGNAL(grabbingMode(GrabbingMode)), osxGrabber, SLOT(setGrabbingMode(GrabbingMode)));
+            QObject::connect(xbmcVideoChecker, SIGNAL(videoMode(VideoMode)), osxGrabber, SLOT(setVideoMode(VideoMode)));
+        }
+        
+        osxGrabber->start();
+        std::cout << "OSX grabber created and started" << std::endl;
+    }
+#else
+#if !defined(ENABLE_DISPMANX) && !defined(ENABLE_FB)
+    if (config.isMember("framegrabber"))
+    {
+        std::cerr << "The osx grabber can not be instantiated, becuse it has been left out from the build" << std::endl;
+    }
+#endif
+#endif
 
 	// Create Json server if configuration is present
 	JsonServer * jsonServer = nullptr;
@@ -233,6 +308,7 @@ int main(int argc, char** argv)
 		std::cout << "Json server created and started on port " << jsonServer->getPort() << std::endl;
 	}
 
+#ifdef ENABLE_PROTOBUF
 	// Create Proto server if configuration is present
 	ProtoServer * protoServer = nullptr;
 	if (config.isMember("protoServer"))
@@ -241,6 +317,7 @@ int main(int argc, char** argv)
 		protoServer = new ProtoServer(&hyperion, protoServerConfig["port"].asUInt());
 		std::cout << "Proto server created and started on port " << protoServer->getPort() << std::endl;
 	}
+#endif
 
 	// Create Boblight server if configuration is present
 	BoblightServer * boblightServer = nullptr;
@@ -259,12 +336,20 @@ int main(int argc, char** argv)
 #ifdef ENABLE_DISPMANX
 	delete dispmanx;
 #endif
+#ifdef ENABLE_FB
+	delete fbGrabber;
+#endif
+#ifdef ENABLE_OSX
+    delete osxGrabber;
+#endif
 #ifdef ENABLE_V4L2
 	delete v4l2Grabber;
 #endif
 	delete xbmcVideoChecker;
 	delete jsonServer;
+#ifdef ENABLE_PROTOBUF
 	delete protoServer;
+#endif
 	delete boblightServer;
 
 	// leave application

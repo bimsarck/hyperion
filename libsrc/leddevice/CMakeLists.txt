@@ -15,6 +15,7 @@ include_directories(
 SET(Leddevice_QT_HEADERS
 		${CURRENT_SOURCE_DIR}/LedRs232Device.h
 		${CURRENT_SOURCE_DIR}/LedDeviceAdalight.h
+		${CURRENT_SOURCE_DIR}/LedDeviceAmbiLed.h
 		${CURRENT_SOURCE_DIR}/LedDevicePhilipsHue.h
 )
 
@@ -30,6 +31,7 @@ SET(Leddevice_HEADERS
 		${CURRENT_SOURCE_DIR}/LedDeviceTest.h
 		${CURRENT_SOURCE_DIR}/LedDeviceHyperionUsbasp.h
 		${CURRENT_SOURCE_DIR}/LedDeviceTpm2.h
+		${CURRENT_SOURCE_DIR}/LedDeviceAtmo.h
 )
 
 SET(Leddevice_SOURCES
@@ -38,6 +40,7 @@ SET(Leddevice_SOURCES
 		${CURRENT_SOURCE_DIR}/LedRs232Device.cpp
 
 		${CURRENT_SOURCE_DIR}/LedDeviceAdalight.cpp
+		${CURRENT_SOURCE_DIR}/LedDeviceAmbiLed.cpp
 		${CURRENT_SOURCE_DIR}/LedDeviceLightpack.cpp
 		${CURRENT_SOURCE_DIR}/LedDeviceMultiLightpack.cpp
 		${CURRENT_SOURCE_DIR}/LedDevicePaintpack.cpp
@@ -47,6 +50,7 @@ SET(Leddevice_SOURCES
 		${CURRENT_SOURCE_DIR}/LedDeviceHyperionUsbasp.cpp
 		${CURRENT_SOURCE_DIR}/LedDevicePhilipsHue.cpp
 		${CURRENT_SOURCE_DIR}/LedDeviceTpm2.cpp
+		${CURRENT_SOURCE_DIR}/LedDeviceAtmo.cpp
 )
 
 if(ENABLE_SPIDEV)
@@ -57,6 +61,7 @@ if(ENABLE_SPIDEV)
 			${CURRENT_SOURCE_DIR}/LedDeviceLpd8806.h
 			${CURRENT_SOURCE_DIR}/LedDeviceP9813.h
 			${CURRENT_SOURCE_DIR}/LedDeviceWs2801.h
+			${CURRENT_SOURCE_DIR}/LedDeviceAPA102.h
 	)
 	SET(Leddevice_SOURCES
 			${Leddevice_SOURCES}
@@ -65,8 +70,20 @@ if(ENABLE_SPIDEV)
 			${CURRENT_SOURCE_DIR}/LedDeviceLpd8806.cpp
 			${CURRENT_SOURCE_DIR}/LedDeviceP9813.cpp
 			${CURRENT_SOURCE_DIR}/LedDeviceWs2801.cpp
+			${CURRENT_SOURCE_DIR}/LedDeviceAPA102.cpp
 	)
 endif(ENABLE_SPIDEV)
+
+if(ENABLE_WS2812BPWM)
+SET(Leddevice_HEADERS
+		${Leddevice_HEADERS}
+		${CURRENT_SOURCE_DIR}/LedDeviceWS2812b.h
+	)
+SET(Leddevice_SOURCES
+		${Leddevice_SOURCES}
+		${CURRENT_SOURCE_DIR}/LedDeviceWS2812b.cpp
+)
+endif(ENABLE_WS2812BPWM)
 
 if(ENABLE_TINKERFORGE)
 	SET(Leddevice_HEADERS

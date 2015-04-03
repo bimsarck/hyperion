@@ -9,5 +9,18 @@
 // Define to enable the spi-device
 #cmakedefine ENABLE_SPIDEV
 
+// Define to enable the ws2812b-pwm-device
+#cmakedefine ENABLE_WS2812BPWM
+
 // Define to enable the spi-device
 #cmakedefine ENABLE_TINKERFORGE
+
+// Define to enable PROTOBUF server
+#cmakedefine ENABLE_PROTOBUF
+
+// Define to enable the framebuffer grabber
+#cmakedefine ENABLE_FB
+
+// Define to enable the osx grabber
+#cmakedefine ENABLE_OSX
+
